@@ -34,7 +34,6 @@ class EventHandler(AssistantEventHandler):
         # Rola automaticamente para a barra de texto
         scroll_to_bottom()
 
-
 # Inicialização da página
 st.set_page_config(page_title="Atendente Excelência Saneamento", layout="centered")
 
@@ -65,6 +64,22 @@ def scroll_to_bottom():
         height=0,
     )
 
+# Verificação e inicialização do estado da sessão
+if "assistant" not in st.session_state:
+    assistants = list(client.beta.assistants.list())
+    assistant_name = "Atendente Excelencia Saneamento"
+    for assistant in assistants:
+        if assistant.name == assistant_name:
+            st.session_state["assistant"] = assistant
+
+if "thread" not in st.session_state:
+    st.session_state["thread"] = create_thread()
+
+if "chat_history" not in st.session_state:
+    st.session_state["chat_history"] = []
+
+if "user_input" not in st.session_state:
+    st.session_state["user_input"] = ""
 
 # Exibição do logo
 st.image("Logo.jpg", width=200)  # Substitua "Logo.jpg" pelo caminho do logo do cliente
@@ -80,22 +95,6 @@ st.markdown(
 )
 
 st.divider()
-
-# Inicializar assistente e thread para cada sessão
-if "assistant" not in st.session_state:
-    assistants = list(client.beta.assistants.list())
-    assistant_name = "Atendente Excelencia Saneamento"
-
-    for assistant in assistants:
-        if assistant.name == assistant_name:
-            st.session_state["assistant"] = assistant
-
-if "thread" not in st.session_state:
-    st.session_state["thread"] = create_thread()
-
-# Inicialize o estado para armazenar o histórico
-if "chat_history" not in st.session_state:
-    st.session_state["chat_history"] = []  # Lista para armazenar perguntas e respostas
 
 # Exibição do histórico de mensagens
 st.header("Histórico de Conversa")
@@ -127,7 +126,6 @@ def enviar_mensagem():
 
         # Limpa o texto do campo de entrada
         st.session_state["user_input"] = ""
-
 
 # Exibição do histórico e campo de entrada de texto
 st.divider()
