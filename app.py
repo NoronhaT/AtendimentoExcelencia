@@ -9,22 +9,9 @@ load_dotenv(find_dotenv())
 # Inicializar o cliente OpenAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-
-# Cache para inicializar o assistente
-@st.cache_resource
-def get_or_create_assistant():
-    assistants = list(client.beta.assistants.list())
-    assistant_name = "Atendente Excelencia Saneamento"
-
-    for assistant in assistants:
-        if assistant.name == assistant_name:
-            return assistant
-
-
-# Cache para criar uma nova thread
-@st.cache_resource
+# Função para criar uma nova thread
 def create_thread():
-    thread = client.beta.threads.create(
+    return client.beta.threads.create(
         messages=[
             {
                 "role": "user",
@@ -34,8 +21,6 @@ def create_thread():
             }
         ]
     )
-    return thread
-
 
 # Classe para manipular eventos do assistente
 class EventHandler(AssistantEventHandler):
@@ -65,7 +50,6 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
 
 # Função para rolar até o final da página
 def scroll_to_bottom():
@@ -97,9 +81,17 @@ st.markdown(
 
 st.divider()
 
-# Inicializar assistente e thread
-assistant = get_or_create_assistant()
-thread = create_thread()
+# Inicializar assistente e thread para cada sessão
+if "assistant" not in st.session_state:
+    assistants = list(client.beta.assistants.list())
+    assistant_name = "Atendente Excelencia Saneamento"
+
+    for assistant in assistants:
+        if assistant.name == assistant_name:
+            st.session_state["assistant"] = assistant
+
+if "thread" not in st.session_state:
+    st.session_state["thread"] = create_thread()
 
 # Inicialize o estado para armazenar o histórico
 if "chat_history" not in st.session_state:
@@ -113,7 +105,6 @@ for message in st.session_state["chat_history"]:
     elif message["role"] == "assistant":
         st.write(f"**Assistente:** {message['content']}")
 
-
 # Função para enviar mensagens e atualizar o histórico
 def enviar_mensagem():
     if st.session_state["user_input"]:  # Verifica se há texto na entrada
@@ -123,13 +114,13 @@ def enviar_mensagem():
 
         # Processa a mensagem com o cliente
         client.beta.threads.messages.create(
-            thread_id=thread.id,
+            thread_id=st.session_state["thread"].id,
             role="user",
             content=user_message
         )
         with client.beta.threads.runs.stream(
-                thread_id=thread.id,
-                assistant_id=assistant.id,
+                thread_id=st.session_state["thread"].id,
+                assistant_id=st.session_state["assistant"].id,
                 event_handler=EventHandler()
         ) as stream:
             stream.until_done()
